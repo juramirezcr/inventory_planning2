@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+<data>
+    <record id="group_show_product_quantity_per_warehouse" model="res.groups">
+        <field name="name">Mostrar cantidad de productos por almacén</field>
+        <field name="category_id" ref="base.module_category_hidden"/>
+        <field name="comment">Mostrar la cantidad de productos por almacén</field>
+    </record>
+</data>
+</odoo>

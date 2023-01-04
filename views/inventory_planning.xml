@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <record id="view_inventory_planning_config_tree" model="ir.ui.view">
+            <field name="name">inventory_planning_config.tree</field>
+            <field name="model">inventory_planning_config</field>
+            <field name="arch" type="xml">
+                <tree string="Configuración">
+                    <field name="name"/>
+                    <field name="fecha_inicio"/>
+                </tree>
+            </field>
+        </record>
+        <record id="view_inventory_planning_config_form" model="ir.ui.view">
+            <field name="name">inventory_planning_config.form</field>
+            <field name="model">inventory_planning_config</field>
+            <field name="arch" type="xml">
+                <form>
+                    <sheet string="Configuración">
+                        <group string="Configuración">
+                            <field string="Nombre" name="name"/>
+                            <field string="Fecha inicio" name="fecha_inicio"/>
+                            <field string="Productos" name="product_ids"/>
+                        </group>
+                        <group string="Funciones">
+                            <button name="crear" string="Crear productos" type="object"/>
+                            <button name="actualizar" string="Actualizar productos" type="object"/>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+        <record id="action_inventory_planning_config" model="ir.actions.act_window">
+            <field name="name">Inventario</field>
+            <field name="res_model">inventory_planning_config</field>
+            <field name="view_mode">tree,form</field>
+        </record>
+        <record id="action_inventory_planning_config_view_tree" model="ir.actions.act_window.view">
+            <field name="sequence" eval="1"/>
+            <field name="view_mode">tree</field>
+            <field name="view_id" ref="view_inventory_planning_config_tree"/>
+            <field name="act_window_id" ref="action_inventory_planning_config"/>
+        </record>
+        <record id="action_inventory_planning_config_view_form" model="ir.actions.act_window.view">
+            <field name="sequence" eval="2"/>
+            <field name="view_mode">form</field>
+            <field name="view_id" ref="view_inventory_planning_config_form"/>
+            <field name="act_window_id" ref="action_inventory_planning_config"/>
+        </record>
+
+        <record id="view_inventory_planning_filter" model="ir.ui.view">
+            <field name="name">inventory.planning.filter</field>
+            <field name="model">inventory_planning</field>
+            <field name="arch" type="xml">
+                <search string="Planeación y manejo">
+                    <field name="product_id"/>
+                    <field name="location_id"/>
+                    <field name="product_tmpl_id"/>
+                    <group expand="1" string="Group By">
+                        <filter string="Ubicación" name="inventory_by_location" context="{'group_by': 'location_id'}"/>
+                        <filter string="Producto" name="inventory_by_product" context="{'group_by': 'product_id'}"/>
+                        <filter string="Compañía" name="inventory_by_company" context="{'group_by': 'company_id'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+        <record id="view_inventory_planning_tree" model="ir.ui.view">
+            <field name="name">inventory_planning.tree</field>
+            <field name="model">inventory_planning</field>
+            <field name="arch" type="xml">
+                <tree string="Inventario">
+                    <field name="company_id"/>
+                    <field name="product_id"/>
+                    <field name="location_id"/>
+                    <field name="inventario"/>
+                    <field name="pedidos_demanda"/>
+                    <field name="pedidos_entregado"/>
+                    <field name="pedidos_por_facturar"/>
+                    <field name="pedidos_facturado"/>
+                </tree>
+            </field>
+        </record>
+        <record id="view_inventory_planning_form" model="ir.ui.view">
+            <field name="name">inventory_planning.form</field>
+            <field name="model">inventory_planning</field>
+            <field name="arch" type="xml">
+                <form>
+                    <sheet string="Producto">
+                        <group string="Producto">
+                            <group string="Información">
+                                <field name="name"/>
+                                <field name="product_id"/>
+                            </group>
+                            <group string="Inventarios">
+                                <field name="inventario"/>
+                                <field name="demanda"/>
+                            </group>
+                            <group string="Pedidos">
+                                <field name="pedidos_demanda"/>
+                                <field name="pedidos_entregado"/>
+                                <field name="pedidos_por_facturar"/>
+                                <field name="pedidos_facturado"/>
+                            </group>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+        <record id="view_inventory_planning_pivot" model="ir.ui.view">
+            <field name="name">inventory_planning.pivot</field>
+            <field name="model">inventory_planning</field>
+            <field name="arch" type="xml">
+                <pivot string="Planeación">
+                    <field name="product_id" type="row"/>
+                    <field name="company_id" type="col"/>
+                    <field name="inventario" type="measure"/>
+                    <field name="demanda" type="measure"/>
+                    <field name="pedidos_demanda" type="measure"/>
+                    <field name="pedidos_entregado" type="measure"/>
+                    <field name="pedidos_por_facturar" type="measure"/>
+                    <field name="pedidos_facturado" type="measure"/>
+                </pivot>
+            </field>
+        </record>
+        <record id="inventory_planning_search_view" model="ir.ui.view">
+            <field name="name">inventory_planning.search.view</field>
+            <field name="model">inventory_planning</field>
+            <field name="arch" type="xml">
+                <search string="Producto">
+                    <field name="product_id"/>
+                    <separator/>
+                    <separator/>
+                    <group expand="0" string="Group By">
+                        <filter name="group_product_id" string="product_id" icon="terp-partner" context="{'group_by':'product_id'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+        <record id="action_inventory_planning" model="ir.actions.act_window">
+            <field name="name">Inventario</field>
+            <field name="res_model">inventory_planning</field>
+            <field name="view_mode">tree,form,pivot</field>
+        </record>
+        <record id="action_inventory_planning_view_tree" model="ir.actions.act_window.view">
+            <field name="sequence" eval="1"/>
+            <field name="view_mode">tree</field>
+            <field name="view_id" ref="view_inventory_planning_tree"/>
+            <field name="act_window_id" ref="action_inventory_planning"/>
+        </record>
+        <record id="action_inventory_planning_view_form" model="ir.actions.act_window.view">
+            <field name="sequence" eval="2"/>
+            <field name="view_mode">form</field>
+            <field name="view_id" ref="view_inventory_planning_form"/>
+            <field name="act_window_id" ref="action_inventory_planning"/>
+        </record>
+        <record id="action_inventory_planning_view_pivot" model="ir.actions.act_window.view">
+            <field name="sequence" eval="3"/>
+            <field name="view_mode">pivot</field>
+            <field name="view_id" ref="view_inventory_planning_pivot"/>
+            <field name="act_window_id" ref="action_inventory_planning"/>
+        </record>
+
+    </data>
+</odoo>

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <menuitem id="menu_inventory_planning" name="Planeamiento" sequence="10" web_icon="inventory_planning,static/description/icon.png"/>
+        <menuitem id="menu_inventory_planning_products" name="Inventario" parent="menu_inventory_planning" sequence="1" action="action_inventory_planning"/>
+        <menuitem id="menu_inventory_planning_configs" name="Configuraciones" parent="menu_inventory_planning" sequence="3" action="action_inventory_planning_config"/>
+    </data>
+</odoo>
