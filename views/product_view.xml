@@ -8,8 +8,6 @@
         <field name="arch" type="xml"> 
             <xpath expr="//field[@name='type']" position="after">
                 <field name="warehouse_quantity"/>
-                <field name="inventario_cr"/>
-                <field name="inventario_usa"/>
             </xpath>
         </field>
     </record>

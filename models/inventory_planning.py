@@ -11,10 +11,7 @@ _logger = logging.getLogger(__name__)
 class InventoryProductTemplate(models.Model):
     _inherit = "product.template"
 
-    warehouse_quantity = fields.Char(compute='_get_warehouse_quantity', string='Cantidades por almacén')
-
-    inventario_cr = fields.Float(string='Inventario CR')
-    inventario_usa = fields.Float(string='Inventario USA')
+    warehouse_quantity = fields.Char(compute='_get_warehouse_quantity', string='Warehouse quantity')
 
     def _get_warehouse_quantity(self):
         for record in self:
@@ -54,162 +51,301 @@ class InventoryPlanningConfig(models.Model):
     _name = 'inventory_planning_config'
     _description = 'Configuración de Planeamiento y manejo'
 
-    name = fields.Char('Configuración')
-    location_cr = fields.Many2one('stock.location', string='Ubicación CR')
-    location_usa = fields.Many2one('stock.location', string='Ubicación USA')
-    product_ids = fields.Many2many('product.product', string='Productos')
-    fecha_inicio = fields.Date(string='Fecha inicio')
+    name = fields.Char('Planning')
+    product_ids = fields.Many2many('product.product', string='Products')
+    fecha_inicio = fields.Date(string='From date')
+    fecha_fin = fields.Date(string='To date')
+    dias = fields.Float(string='Ideal inventory in days')
+    porcentaje = fields.Float(string='Porcentage  back order consider')
+    product_ids = fields.Many2many('product.product', string='Products')
+    company_ids = fields.Many2many('res.company', string='Companies')
+    locations = fields.Many2many('stock.location', string='Ubicaciones')
 
     @api.multi
     @api.depends()
-    def actualizar(self):
-        _logger.info('******ACTUALIZAR******')
+    def ejecutar(self):
+        _logger.info('******PRODUCTOS PARA PLANIAMIENTO******')
+
         for temp in self:
+            companies = temp.company_ids
             productos = temp.product_ids
-        inventory_planning = self.env['inventory_planning'].search([('company_id', '!=', False)])
 
-        if inventory_planning:
-            for planning in inventory_planning:
+        inventory_planning_delete = self.env['inventory_planning'].search(
+            [('inventory_planning_config', '=', temp.id)])
 
-                _logger.info('PRODUCTO .....%s', planning.name)
-                _logger.info('PRODUCTO ID .....%s', planning.product_id.id)
-                stock_quant = self.env['stock.quant'].search([('product_id', '=', planning.product_id.id)])
+        for invetory_delete in inventory_planning_delete:
+            invetory_delete.unlink()
+
+
+        for company in companies:
+            _logger.info('Company .....: %s', company.name)
+
+            for producto in productos:
+                _logger.info('Producto.....%s', producto.name)
+
+                # BUSCAR SI EXISTE EN EL PLANEAMIENTO EL PRODUCTO
+                inventory_planning = self.env['inventory_planning'].search(
+                    [('inventory_planning_config', '=', temp.id),
+                     ('product_id', '=', producto.id),
+                     ('company_id', '=', company.id),
+                     ])
+                vals = {'inventory_planning_config': temp.id,
+                        'company_id': company.id,
+                        'product_id': producto.id,
+                        'name': producto.name,
+                        }
+                _logger.info('############################')
+                _logger.info('Producto.....%s', vals)
+
+                if not inventory_planning:
+                    # CREAR UN PRODUCTO POR COMPAÑÍA SI TIENE LOCALIZACIÓN CON EXISTENCIAS
+                    inventory_planning = self.env['inventory_planning'].create(vals)
+                    _logger.info('creado.....')
+                else:
+                    inventory_planning.write(vals)
+                    _logger.info('actualizado.....')
+                _logger.info('############################')
+
+                # ------------------------------------------------------
+                # ORDENES DE PORTAL
+                # ------------------------------------------------------
+                _logger.info('PORTAL ORDERS.....')
+                pedidos_portal = 0.0
+                try:
+                    # Buscar pedidos de portal
+                    buscar_pedidos_portal = self.env['portal.sale.order'].search([
+                            ('company_id', '=', company.id),
+                            ('create_date', '>', temp.fecha_inicio),
+                            ('state', 'in', ['approved']),
+                        ])
+                    for pedido_portal in buscar_pedidos_portal:
+                        # Buscar líneas de pedidos de portal
+                        lineas_pedidos_portal = self.env['portal.sale.order.line'].search([
+                                ('product_id', '=', producto.id),
+                                ('create_date', '>', temp.fecha_inicio),
+                                ('order_id', '=', pedido_portal.id),
+                                ])
+                        for linea_pedido_portal in lineas_pedidos_portal:
+                            if linea_pedido_portal.product_id == producto.id:
+                                pedidos_portal += linea_pedido_portal.qty
+
+                    _logger.info('Total pedidos portal.....%s', pedidos_portal)
+                    vals = {
+                        'pedidos_portal': pedidos_portal,
+                    }
+                    _logger.info('registrar pedidos.....%s', vals)
+                    inventory_planning.write(vals)
+
+                except:
+                    _logger.info('Error al consultar pedidos de portal.....')
+
+                # ------------------------------------------------------
+                # ORDENES DE VENTAS
+                # ------------------------------------------------------
+                _logger.info('LINEAS DE PEDIDOS DE VENTAS INVENTARIO.....')
+                try:
+                    ordenes = self.env['sale.order.line'].search([
+                                ('company_id', '=', company.id),
+                                ('product_id', '=', producto.id),
+                                ('create_date', '>', temp.fecha_inicio),
+                                ('state', 'in', ['sale', 'done']),
+                                ])
+
+                    demanda = 0.0
+                    remanente = 0.0
+                    entregado = 0.0
+                    facturado = 0.0
+                    por_facturar = 0.0
+                    if ordenes:
+                        _logger.info('Analizar líneas pedidos de ventas.....')
+                        for orden in ordenes:
+                            demanda += orden.product_uom_qty
+                            entregado += orden.qty_delivered
+                            facturado += orden.qty_invoiced
+                            por_facturar += orden.qty_to_invoice
+                        remanente = demanda - entregado
+
+                    vals = {
+                            'demanda': demanda,
+                            'remanente': remanente,
+                            'entregado': entregado,
+                            'facturado': facturado,
+                            'por_facturar': por_facturar,
+                            }
+                    _logger.info('registrar pedidos.....%s', vals)
+                    inventory_planning.write(vals)
+
+                except Exception as e:
+                    _logger.info('Error al consultar ordenes de ventas.....:%s', str(e))
+
+
+
+                # ------------------------------------------------------
+                # PEDIDOS DE COMPRA
+                # ------------------------------------------------------
+                _logger.info('LINEAS DE PEDIDOS DE COMPRA.....')
+                lineas_ordenes = self.env['purchase.order.line'].search([
+                        ('company_id', '=', company.id),
+                        ('product_id', '=', producto.id),
+                        ('create_date', '>', temp.fecha_inicio),
+                        ('state', 'in', ['purchase', 'done']),
+                        ])
+
+                compras = 0.0
+                compras_recibido = 0.0
+                compras_facturado = 0.0
+                compras_total = 0.0
+
+                if lineas_ordenes:
+                    _logger.info('Analizar líneas pedidos de compras.....')
+                    for linea_orden in lineas_ordenes:
+                        # Buscar la orden de compra para verificar la fecha
+                        _logger.info('linea pedido de compra.....%s', linea_orden)
+
+                        ordenes = self.env['purchase.order'].search([
+                                ('id', '=', linea_orden.order_id.id),
+                                ])
+
+                        for orden in ordenes:
+                            _logger.info('pedido de compra.....%s', linea_orden)
+                            _logger.info('fecha configuración.....%s', temp.fecha_inicio)
+                            _logger.info('fecha planificada.....%s', orden.date_planned.date())
+
+                            if orden.date_planned.date() >= temp.fecha_inicio:
+                                compras += linea_orden.product_uom_qty
+                                compras_recibido += linea_orden.qty_received
+                                compras_facturado += linea_orden.qty_invoiced
+                                compras_total += linea_orden.price_total
+
+                vals = {
+                        'compras': compras,
+                        'compras_recibido': compras_recibido,
+                        'compras_facturado': compras_facturado,
+                        'compras_total': compras_total,
+                        }
+                _logger.info('registrar compras.....%s', vals)
+                inventory_planning.write(vals)
+
+                # ------------------------------------------------------
+                # INVENTARIO EN UBICACIONES
+                # ------------------------------------------------------
+
+                stock_quant = self.env['stock.quant'].sudo().search(
+                    [('company_id', '=', company.id),
+                     ('product_id', '=', producto.id),
+                     ('location_id.usage', '=', 'internal')])
+
+                ubicacion_id = ''
+                ubicacion = ''
+                nombre = ''
+                inventario = 0.0
+                inventario_total = 0.0
 
                 if stock_quant:
                     for quant in stock_quant:
-                        if quant.location_id.id == planning.location_id.id:
-                            _logger.info('Inventario en localización.....:%s', quant.location_id.id)
-                            vals = {'inventario': quant.quantity}
-                            _logger.info('registrar .....%s', vals)
-                            planning.write(vals)
-                #------------------------------------------------------
-                # MOVIMIENTOS DE INVENTARIO
-                #------------------------------------------------------
-                _logger.info('MOVIMIENTOS DE INVENTARIO.....')
-                salidas = self.env['stock.move'].search([
-                    ('product_id', '=', planning.product_id.id),
-                    ('location_id', '=', planning.location_id.id),
-                    ('create_date', '>', temp.fecha_inicio),
-                    ('state', 'in', ['assigned', 'confirmed','partially_available']),
-                ])
 
-                demanda = 0.0
-                pedidos_demanda = 0.0
-                pedidos_entregado = 0.0
-                pedidos_facturado = 0.0
-                pedidos_por_facturar = 0.0
-                if salidas:
-                    for salida in salidas:
-                        if salida.state != 'draf' and salida.state != 'waiting' and  salida.state != 'cancel':
-                            #_logger.info('Salida nombre.....: %s', salida.name)
-                            #_logger.info('Salida estado.....: %s', salida.state)
+                        location_name = quant.location_id.location_id.name + '/' + quant.location_id.name
+                        location_usage = quant.location_id.usage
+                        ubicacion_id = quant.location_id.id
+                        ubicacion_nombre = location_name
+                        _logger.info('location id .....: %s', ubicacion_id)
+                        _logger.info('location name .....: %s', location_name)
+                        _logger.info('location usage .....: %s', location_usage)
 
-                            #_logger.info('Producto salida.....: %s', salida.product_id.name)
-                            #_logger.info('Linea pedido.....: %s', salida.sale_line_id.id)
-                            #_logger.info('Demanda.....: %s', salida.product_uom_qty)
-                            #_logger.info('Remanente.....: %s', salida.remaining_qty)
-                            demanda += salida.product_uom_qty
-                            #BUSCAR INFORMACIÓN PEDIDO
-                            sale_line = self.env['sale.order.line'].search([
-                                    ('id', '=', salida.sale_line_id.id),
-                            ])
-                            if sale_line:
-                                for line in sale_line:
-                                    #_logger.info('Información pedido.....')
-                                    #_logger.info('pedidos_demanda.....%s', line.product_uom_qty)
-                                    #_logger.info('pedidos_entregado.....%s', line.qty_delivered)
-                                    #_logger.info('pedidos_facturado.....%s', line.qty_invoiced)
-                                    #_logger.info('pedidos_por_facturar.....%s', line.qty_to_invoice)
+                        # BUSCAR SI EXISTE EL PRODUCTO EN EL PLANEAMIENTO
+                        inventory_planning_location = self.env['inventory_planning'].search(
+                            [('inventory_planning_config', '=', temp.id),
+                             ('product_id', '=', producto.id),
+                             ('company_id', '=', company.id),
+                             ('location_id', '=', ubicacion_id),
+                             ])
 
-                                    pedidos_demanda += line.product_uom_qty
-                                    pedidos_entregado += line.qty_delivered
-                                    pedidos_facturado += line.qty_invoiced
-                                    pedidos_por_facturar += line.qty_to_invoice
+                        if inventory_planning_location:
+                            for inventori_location in inventory_planning_location:
+                                inventario = quant.quantity + inventori_location.inventario
+                        else:
+                            inventario = quant.quantity
 
-                vals = {
-                        'demanda': demanda,
-                        'pedidos_demanda': pedidos_demanda,
-                        'pedidos_entregado': pedidos_entregado,
-                        'pedidos_facturado': pedidos_facturado,
-                        'pedidos_por_facturar': pedidos_por_facturar,
-                        }
-                _logger.info('registrar pedidos.....%s', vals)
-                planning.write(vals)
+                        inventario_total += inventario
 
-    @api.multi
-    @api.depends()
-    def crear(self):
-        _logger.info('******CREAR PRODUCTOS PARA PLANIAMIENTO******')
+                        _logger.info('inventario .....: %s', inventario)
 
-        for temp in self:
-            productos = temp.product_ids
+                        stock_move = self.env['stock.move'].sudo().search(
+                            [('company_id', '=', company.id),
+                             ('product_id', '=', producto.id),
+                             ('location_dest_id', '=', ubicacion_id),
+                             ('date_expected', '>', temp.fecha_inicio)
+                             ])
 
-        for producto in productos:
-            stock_quant = self.env['stock.quant'].search([('product_id', '=', producto.id)])
-            if stock_quant:
-                for quant in stock_quant:
-                    _logger.info('buscar location id .....: %s',  quant.location_id.id)
+                        recepcion = 0.0
+                        transito = 0.0
 
-                    location = self.env['stock.location'].search([('id', '=', quant.location_id.id)])
-                    _logger.info('location name .....: %s', location.name)
-                    _logger.info('location usage .....: %s', location.usage)
+                        for move in stock_move:
+                            recepcion += move.product_uom_qty
 
-                    if location.usage == 'internal':
-                        _logger.info('Creer Producto / Location .....')
-                        vals = {
-                            'inventory_planning_config': temp.id,
-                            'company_id': location.company_id.id,
-                            'product_id': producto.id,
-                            'location_id': quant.location_id.id,
-                            'name': producto.name,
-                            'inventario': quant.quantity,
-                        }
-                        _logger.info('datos.....%s', vals)
-                        self.env['inventory_planning'].create(vals)
+                            if move.state == 'done':
+                                transito += 0
+                            else:
+                                transito += move.product_uom_qty
+
+
+                        vals = {'inventory_planning_config': temp.id,
+                                'company_id': company.id,
+                                'product_id': producto.id,
+                                'location_id': ubicacion_id,
+                                'inventario': inventario,
+                                'recepcion': recepcion,
+                                'transito': transito,
+                                'name': producto.name,
+                                }
+
+                        _logger.info('############################')
+                        _logger.info('Producto ubicación.....%s', vals)
+
+                        if not inventory_planning_location:
+                            self.env['inventory_planning'].create(vals)
+                            _logger.info('creado.....')
+                        else:
+                            inventory_planning_location.write(vals)
+                            _logger.info('actualizado.....')
+                        _logger.info('############################')
+
+                        ubicacion = ubicacion_id
+
+                    _logger.info('----->>>>> inventario total .....: %s', inventario_total)
+                    #inventory_planning.inventario = inventario_total
+
+
 
 class InventoryPlanning(models.Model):
     _name = 'inventory_planning'
     _description = 'Planeamiento y manejo de inventarios'
 
-    name = fields.Char(string='Nombre', readonly=True)
+    name = fields.Char(string='Name', readonly=True)
 
-    inventory_planning_config = fields.Many2one('inventory_planning_config', string='Planeamiento', readonly=True)
-    company_id = fields.Many2one('res.company', string='Compañía', readonly=True)
-    product_id = fields.Many2one('product.product', string='Producto', readonly=True)
+    inventory_planning_config = fields.Many2one('inventory_planning_config', string='Planning', readonly=True)
+    company_id = fields.Many2one('res.company', string='Company', readonly=True)
+    product_id = fields.Many2one('product.product', string='Product', readonly=True)
     product_tmpl_id = fields.Many2one('product.template', string='Product Template',
                                       related='product_id.product_tmpl_id', readonly=True)
 
-    location_id = fields.Many2one('stock.location', string='Ubicación', readonly=True)
 
-    inventario = fields.Float(required=False, copy=False, readonly=True, string='Inventario')
 
-    ventas = fields.Float(required=False, copy=False, readonly=True, string='Ventas')
+    location_id = fields.Many2one('stock.location', string='Location', readonly=True)
 
-    demanda = fields.Float(required=False, copy=False, readonly=True, string='Demanda')
+    inventario = fields.Float(required=False, copy=False, readonly=True, string='Inventory')
+    recepcion = fields.Float(required=False, copy=False, readonly=True, string='Receipts')
+    transito = fields.Float(required=False, copy=False, readonly=True, string='Transit')
+    demanda = fields.Float(required=False, copy=False, readonly=True, string='SO Out')
+    remanente = fields.Float(required=False, copy=False, readonly=True, string='Back Orders')
+    compras = fields.Float(required=False, copy=False, readonly=True, string='PO Qty')
+    compras_recibido = fields.Float(required=False, copy=False, readonly=True, string='PO Received Qty')
+    compras_facturado = fields.Float(required=False, copy=False, readonly=True, string='PO Billed Qty')
+    compras_total = fields.Float(required=False, copy=False, readonly=True, string='Purchase Total')
 
-    pedidos_demanda = fields.Float(required=False, copy=False, readonly=True, string='Pedidos Demanda')
-    pedidos_entregado = fields.Float(required=False, copy=False, readonly=True, string='Pedidos Entregado')
-    pedidos_facturado = fields.Float(required=False, copy=False, readonly=True, string='Pedidos Facturado')
-    pedidos_por_facturar = fields.Float(required=False, copy=False, readonly=True, string='Pedidos Por Facturar')
+    pedidos_portal = fields.Float(required=False, copy=False, readonly=True, string='Portal Demand')
 
-class InventorySalePlanning(models.Model):
-    _name = 'inventory_planning_portal_orders'
-    _description = 'Solicitudes, Pedidos y Ventas'
+    entregado = fields.Float(required=False, copy=False, readonly=True, string='Delivered')
+    facturado = fields.Float(required=False, copy=False, readonly=True, string='Invoiced')
+    por_facturar = fields.Float(required=False, copy=False, readonly=True, string='Pending bill')
 
-    name = fields.Char(string='Nombre', readonly=True)
-
-    inventory_planning_config = fields.Many2one('inventory_planning_config', string='Planeamiento', readonly=True)
-    company_id = fields.Many2one('res.company', string='Compañía', readonly=True)
-    product_id = fields.Many2one('product.product', string='Producto', readonly=True)
-    product_tmpl_id = fields.Many2one('product.template', string='Product Template',
-                                      related='product_id.product_tmpl_id', readonly=True)
-
-    solicitado_portal = fields.Float(required=False, copy=False, readonly=True, string='Portal (Requested)')
-    aprobado_portal = fields.Float(required=False, copy=False, readonly=True, string='Portal (Approved)')
-    pedidos_portal = fields.Float(required=False, copy=False, readonly=True, string='Portal Total')
-
-    demanda = fields.Float(required=False, copy=False, readonly=True, string='Demanda')
-    pedidos_demanda = fields.Float(required=False, copy=False, readonly=True, string='Demanda')
-    pedidos_entregado = fields.Float(required=False, copy=False, readonly=True, string='Entregado')
-    pedidos_facturado = fields.Float(required=False, copy=False, readonly=True, string='Facturado')
-    pedidos_por_facturar = fields.Float(required=False, copy=False, readonly=True, string='Por Facturar')

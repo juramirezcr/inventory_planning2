@@ -1,0 +1,115 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+# * inventory_planning
+# 
+# Translators:
+# Julio Ramirez <jramirez@facturaodoocr.com>, 2023
+
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2023-01-01 00:00+0000\n"
+"PO-Revision-Date: 2023-01-01 01:00+0000\n"
+"Last-Translator: Julio Ramirez Ramirez, 2022\n"
+"Language-Team: Spanish (https://www.facturaodoocr.com/)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: \n"
+"Language: es\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#. module: inventory_planning
+#: model:ir.model.fields,field_description:inventory_planning.field_name
+msgid "Name"
+msgstr "Nombre"
+
+#. module: inventory_planning
+#: model:ir.model.fields,field_description:inventory_planning.field_inventory_planning_config
+msgid "Planning"
+msgstr "Planeamiento"
+
+#. module: inventory_planning
+#: model:ir.model.fields,field_description:inventory_planning.field_company_id
+msgid "Company"
+msgstr "Compañía"
+
+#. module: inventory_planning
+#: model:ir.model.fields,field_description:inventory_planning.field_product_id
+msgid "Product"
+msgstr "Producto"
+
+#. module: inventory_planning
+#: model:ir.model.fields,field_description:inventory_planning.field_inventory
+msgid "Inventory"
+msgstr "Inventario"
+
+#. module: inventory_planning
+#: model:ir.model.fields,field_description:inventory_planning.field_demanda
+msgid "Ordered Qty"
+msgstr "Cantidad Ordenada"
+
+#. module: inventory_planning
+#: model:ir.model.fields,field_description:inventory_planning.field_remanente
+msgid "Back Orders"
+msgstr "Pendiente en Ordenes"
+
+#. module: inventory_planning
+#: model:ir.model.fields,field_description:inventory_planning.field_pedidos_portal
+msgid "Portal Demand"
+msgstr "Pedido en portal"
+
+#. module: inventory_planning
+#: model:ir.model.fields,field_description:inventory_planning.field_entregado
+msgid "Delivered Quantity"
+msgstr "Cantidad entregada"
+
+#. module: inventory_planning
+#: model:ir.model.fields,field_description:inventory_planning.field_facturado
+msgid "Invoiced Quantity"
+msgstr "Facturado"
+
+#. module: inventory_planning
+#: model:ir.model.fields,field_description:inventory_planning.field_por_facturar
+msgid "Pending to bill"
+msgstr "Pendiente facturar"
+
+#. module: inventory_planning
+#: model:ir.model.fields,field_description:inventory_planning.field_location_id
+msgid "Location"
+msgstr "Ubicación"
+
+#. module: inventory_planning
+#: model:ir.model.fields,field_description:inventory_planning.field_fecha_inicio
+msgid "From date"
+msgstr "Fecha desde"
+
+#. module: inventory_planning
+#: model:ir.model.fields,field_description:inventory_planning.field_fecha_fin
+msgid "To date"
+msgstr "Fecha hasta"
+
+#. module: inventory_planning
+#: model:ir.model.fields,field_description:inventory_planning.field_dias
+msgid "Days"
+msgstr "Días"
+
+#. module: inventory_planning
+#: model:ir.model.fields,field_description:inventory_planning.field_porcentaje
+msgid "Porcentage"
+msgstr "Porcentaje"
+
+#. module: inventory_planning
+#: model:ir.model.fields,field_description:inventory_planning.field_warehouse_quantity
+msgid "Warehouse quantity"
+msgstr "Cantidad por almacén"
+
+#. module: inventory_planning
+#: model:ir.model.fields,field_description:inventory_planning.field_inventory_planning_location
+msgid "Locations"
+msgstr "Ubicaciones"
+
+#. module: inventory_planning
+#: model:ir.model.fields,field_description:inventory_planning.field_inventory_planning_company_ids
+msgid "Companies"
+msgstr "Compañías"
