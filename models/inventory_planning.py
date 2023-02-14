@@ -8,44 +8,90 @@ from odoo import api, fields, models, tools
 
 _logger = logging.getLogger(__name__)
 
-class InventoryProductTemplate(models.Model):
-    _inherit = "product.template"
 
-    warehouse_quantity = fields.Char(compute='_get_warehouse_quantity', string='Warehouse quantity')
+class InventoryPlanningStockQuant(models.Model):
+    _inherit = 'stock.quant'
 
-    def _get_warehouse_quantity(self):
-        for record in self:
-            warehouse_quantity_text = ''
-            product_id = self.env['product.product'].sudo().search([('product_tmpl_id', '=', record.id)])
-            if product_id:
-                quant_ids = self.env['stock.quant'].sudo().search([('product_id','=',product_id[0].id),('location_id.usage','=','internal')])
-                t_warehouses = {}
-                for quant in quant_ids:
-                    if quant.location_id:
-                        if quant.location_id not in t_warehouses:
-                            t_warehouses.update({quant.location_id:0})
-                        t_warehouses[quant.location_id] += quant.quantity
+    def view_reserved_quantity(self):
+        sml_ids = self.env['stock.move.line'].search([
+            ('product_id', '=', self.product_id.id),
+            ('location_id', '=', self.location_id.id),
+            ('state', 'not in', ['done', 'cancel']),
+            ('product_qty', '>', 0)
+        ])
+        return self.view_reserved_quantity_sml(sml_ids)
 
-                tt_warehouses = {}
-                for location in t_warehouses:
-                    warehouse = False
-                    location1 = location
-                    while (not warehouse and location1):
-                        warehouse_id = self.env['stock.warehouse'].sudo().search([('lot_stock_id','=',location1.id)])
-                        if len(warehouse_id) > 0:
-                            warehouse = True
-                        else:
-                            warehouse = False
-                        location1 = location1.location_id
-                    if warehouse_id:
-                        if warehouse_id.name not in tt_warehouses:
-                            tt_warehouses.update({warehouse_id.name:0})
-                        tt_warehouses[warehouse_id.name] += t_warehouses[location]
+    def view_reserved_quantity_sml(self, sml_ids):
+        context = {'create': False, 'edit': False}
+        tree_view_id = self.env.ref('stock.view_move_line_tree').id
+        form_view_id = self.env.ref('stock.view_move_line_form').id
+        action = {
+            'name': 'Reserved',
+            'view_mode': 'form',
+            'res_model': 'stock.move.line',
+            'views': [(tree_view_id, 'tree'), (form_view_id, 'form')],
+            'view_id': tree_view_id,
+            'domain': [('id', 'in', sml_ids.ids)],
+            'type': 'ir.actions.act_window',
+            'context': context,
+            'binding_views': 'form',
+            'target': 'new'
+        }
+        return action
 
-                for item in tt_warehouses:
-                    if tt_warehouses[item] != 0:
-                        warehouse_quantity_text = warehouse_quantity_text + ' ' + item + ': ' + str(tt_warehouses[item])
-                record.warehouse_quantity = warehouse_quantity_text
+class InventoryPlanningPurchaseLines(models.Model):
+    _inherit = 'purchase.order'
+
+    def view_transit(self):
+        sml_ids = self.env['purchase.order.line'].search([
+            ('product_id', '=', self.product_id.id),
+            ('order', '=', self.id),
+            ('state', 'in', ['purchase', 'done'])
+            ])
+        return self.view_transit_sml(sml_ids)
+
+    def view_transit_sml(self, sml_ids):
+        context = {'create': False, 'edit': False}
+        tree_view_id = self.env.ref('purchase.purchase_order_line_tree').id
+        form_view_id = self.env.ref('purchase.purchase_order_line_form2').id
+        action = {
+            'name': 'Purchases',
+            'view_mode': 'form',
+            'res_model': 'purchase.order.line',
+            'views': [(tree_view_id, 'tree'), (form_view_id, 'form')],
+            'view_id': tree_view_id,
+            'domain': [('id', 'in', sml_ids.ids)],
+            'type': 'ir.actions.act_window',
+            'context': context,
+            'binding_views': 'form',
+            'target': 'new'
+        }
+        return action
+
+class ProductTemplate(models.Model):
+    _inherit = 'product.template'
+
+    def view_reserved_quantity_mw(self):
+        sml_ids = self.env['stock.move.line'].search([
+            ('product_id', 'in', self.product_variant_ids.ids),
+            ('state', 'not in', ['done', 'cancel']),
+            ('product_qty', '>', 0)
+        ])
+        return self.env['stock.quant'].view_reserved_quantity_sml(sml_ids)
+
+
+class ProductProduct(models.Model):
+    _inherit = 'product.product'
+
+    def view_reserved_quantity_mw(self):
+        sml_ids = self.env['stock.move.line'].search([
+            ('product_id', '=', self.id),
+            ('state', 'not in', ['done', 'cancel']),
+            ('product_qty', '>', 0)
+        ])
+        return self.env['stock.quant'].view_reserved_quantity_sml(sml_ids)
+
+
 
 class InventoryPlanningConfig(models.Model):
     _name = 'inventory_planning_config'
@@ -59,7 +105,46 @@ class InventoryPlanningConfig(models.Model):
     porcentaje = fields.Float(string='Porcentage  back order consider')
     product_ids = fields.Many2many('product.product', string='Products')
     company_ids = fields.Many2many('res.company', string='Companies')
+    provider_ids = fields.Many2many('res.partner', string='Providers', domain=[('supplier', '=', True)])
     locations = fields.Many2many('stock.location', string='Ubicaciones')
+
+    @api.multi
+    @api.depends()
+    def cargar_productos_proveedor(self):
+        _logger.info('******PROVEEDORES PARA PLANIAMIENTO******')
+
+        for temp in self:
+            companies = temp.company_ids
+            providers = temp.provider_ids
+            products = temp.product_ids
+
+        for provider in providers:
+            _logger.info('Proveedor configurado .....: %s', provider.name)
+
+            for company in companies:
+
+                productos = self.env['product.product'].search([('active', '=', True),
+                                                                ('company_id', '=', company.id)])
+
+                for producto in productos:
+                    _logger.info('Producto.....%s', producto.name)
+                    proveedores = producto.seller_ids
+                    existe = 'NO'
+                    for proveedor in proveedores:
+                        _logger.info('provider.id.....: %s', provider.id)
+                        _logger.info('proveedor.id.....: %s', proveedor.name.id)
+
+                        if provider.id == proveedor.name.id:
+                            agregar = 'SI'
+                            _logger.info('verificar si existe producto en planeamiento actual....')
+                            for product in products:
+                                if product.id == producto.id:
+                                    existe = 'SI'
+                            _logger.info('Existe.....%s', existe)
+
+                            if existe == 'NO':
+                                _logger.info('Agregar producto a planeamiento....')
+                                self.product_ids =  [(4, producto.id)]
 
     @api.multi
     @api.depends()
@@ -195,6 +280,7 @@ class InventoryPlanningConfig(models.Model):
                 compras_recibido = 0.0
                 compras_facturado = 0.0
                 compras_total = 0.0
+                transito = 0.0
 
                 if lineas_ordenes:
                     _logger.info('Analizar líneas pedidos de compras.....')
@@ -216,12 +302,14 @@ class InventoryPlanningConfig(models.Model):
                                 compras_recibido += linea_orden.qty_received
                                 compras_facturado += linea_orden.qty_invoiced
                                 compras_total += linea_orden.price_total
+                                transito = compras - compras_recibido
 
                 vals = {
                         'compras': compras,
                         'compras_recibido': compras_recibido,
                         'compras_facturado': compras_facturado,
                         'compras_total': compras_total,
+                        'transito': transito,
                         }
                 _logger.info('registrar compras.....%s', vals)
                 inventory_planning.write(vals)
@@ -270,32 +358,31 @@ class InventoryPlanningConfig(models.Model):
 
                         _logger.info('inventario .....: %s', inventario)
 
-                        stock_move = self.env['stock.move'].sudo().search(
-                            [('company_id', '=', company.id),
-                             ('product_id', '=', producto.id),
-                             ('location_dest_id', '=', ubicacion_id),
-                             ('date_expected', '>', temp.fecha_inicio)
-                             ])
+                        #stock_move = self.env['stock.move.line'].sudo().search(
+                        #    [('company_id', '=', company.id),
+                        #     ('product_id', '=', producto.id),
+                        #     ('location_dest_id', '=', ubicacion_id),
+                        #     ('date_expected', '>', temp.fecha_inicio)
+                        #     ])
 
-                        recepcion = 0.0
-                        transito = 0.0
+                        movimientos = self.env['stock.move.line'].search([
+                            ('product_id', '=',  producto.id),
+                            ('location_id', '=', ubicacion_id),
+                            ('state', 'not in', ['done', 'cancel']),
+                            ('product_qty', '>', 0)
+                        ])
 
-                        for move in stock_move:
-                            recepcion += move.product_uom_qty
+                        reservado = 0.0
 
-                            if move.state == 'done':
-                                transito += 0
-                            else:
-                                transito += move.product_uom_qty
-
+                        for move in movimientos:
+                            reservado += move.product_qty
 
                         vals = {'inventory_planning_config': temp.id,
                                 'company_id': company.id,
                                 'product_id': producto.id,
                                 'location_id': ubicacion_id,
                                 'inventario': inventario,
-                                'recepcion': recepcion,
-                                'transito': transito,
+                                'reservado': reservado,
                                 'name': producto.name,
                                 }
 
@@ -329,23 +416,36 @@ class InventoryPlanning(models.Model):
     product_tmpl_id = fields.Many2one('product.template', string='Product Template',
                                       related='product_id.product_tmpl_id', readonly=True)
 
-
-
     location_id = fields.Many2one('stock.location', string='Location', readonly=True)
 
     inventario = fields.Float(required=False, copy=False, readonly=True, string='Inventory')
-    recepcion = fields.Float(required=False, copy=False, readonly=True, string='Receipts')
     transito = fields.Float(required=False, copy=False, readonly=True, string='Transit')
+    reservado = fields.Float(required=False, copy=False, readonly=True, string='Reserved')
     demanda = fields.Float(required=False, copy=False, readonly=True, string='SO Out')
     remanente = fields.Float(required=False, copy=False, readonly=True, string='Back Orders')
     compras = fields.Float(required=False, copy=False, readonly=True, string='PO Qty')
     compras_recibido = fields.Float(required=False, copy=False, readonly=True, string='PO Received Qty')
     compras_facturado = fields.Float(required=False, copy=False, readonly=True, string='PO Billed Qty')
     compras_total = fields.Float(required=False, copy=False, readonly=True, string='Purchase Total')
-
     pedidos_portal = fields.Float(required=False, copy=False, readonly=True, string='Portal Demand')
-
     entregado = fields.Float(required=False, copy=False, readonly=True, string='Delivered')
     facturado = fields.Float(required=False, copy=False, readonly=True, string='Invoiced')
     por_facturar = fields.Float(required=False, copy=False, readonly=True, string='Pending bill')
 
+    def view_reserved_quantity(self):
+        sml_ids = self.env['stock.move.line'].search([
+                ('product_id','=',self.product_id.id),
+                ('location_id','=',self.location_id.id),
+                ('state','not in',['done','cancel']),
+                ('product_qty','>',0)
+                ])
+        return self.env['stock.quant'].view_reserved_quantity_sml(sml_ids)
+
+    def view_transit(self):
+        lineas_ordenes = self.env['purchase.order.line'].search([
+                ('company_id', '=', self.company_id.id),
+                ('product_id', '=', self.product_id.id),
+                ('create_date', '>', self.inventory_planning_config.fecha_inicio),
+                ('state', 'in', ['purchase', 'done'])
+                ])
+        return self.env['purchase.order'].view_transit_sml(lineas_ordenes)

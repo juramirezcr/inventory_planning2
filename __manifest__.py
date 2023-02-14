@@ -10,10 +10,10 @@
     'website': 'https://facturaodoocr.com',
     'maintainer': 'FacturaOdooCR.com',
     'category': 'Inventory',
-    'depends': ['stock'],
+    'depends': ['stock','purchase'],
     'data': [
           'views/inventory_planning.xml',
-          'views/product_view.xml',
+          #'views/product_view.xml',
           'views/menu_views.xml',
           'security/warehouse_security.xml',
           'security/ir.model.access.csv'
