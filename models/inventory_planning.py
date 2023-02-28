@@ -211,8 +211,7 @@ class InventoryPlanningConfig(models.Model):
                                 ('order_id', '=', pedido_portal.id),
                                 ])
                         for linea_pedido_portal in lineas_pedidos_portal:
-                            if linea_pedido_portal.product_id == producto.id:
-                                pedidos_portal += linea_pedido_portal.qty
+                            pedidos_portal += linea_pedido_portal.qty
 
                     _logger.info('Total pedidos portal.....%s', pedidos_portal)
                     vals = {
