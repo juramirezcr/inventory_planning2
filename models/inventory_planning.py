@@ -205,12 +205,14 @@ class InventoryPlanningConfig(models.Model):
                         ])
                     for pedido_portal in buscar_pedidos_portal:
                         # Buscar líneas de pedidos de portal
+                        _logger.info('buscar lineas pedido portal.....%s', pedidos_portal)
                         lineas_pedidos_portal = self.env['portal.sale.order.line'].search([
                                 ('product_id', '=', producto.id),
                                 ('create_date', '>', temp.fecha_inicio),
                                 ('order_id', '=', pedido_portal.id),
                                 ])
                         for linea_pedido_portal in lineas_pedidos_portal:
+                            _logger.info('portal producto.....%s', linea_pedido_portal)
                             pedidos_portal += linea_pedido_portal.qty
 
                     _logger.info('Total pedidos portal.....%s', pedidos_portal)
