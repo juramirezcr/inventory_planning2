@@ -325,12 +325,12 @@ class InventoryPlanningConfig(models.Model):
                 ubicacion_id = ''
                 ubicacion = ''
                 nombre = ''
-                inventario = 0.0
+                
                 inventario_total = 0.0
 
                 if stock_quant:
                     for quant in stock_quant:
-
+                        inventario = 0.0
                         location_name = quant.location_id.location_id.name + '/' + quant.location_id.name
                         location_usage = quant.location_id.usage
                         ubicacion_id = quant.location_id.id
@@ -349,10 +349,9 @@ class InventoryPlanningConfig(models.Model):
 
                         if inventory_planning_location:
                             for inventori_location in inventory_planning_location:
-                                inventario = quant.quantity + inventori_location.inventario
-                        else:
-                            inventario = quant.quantity
-
+                                #inventario = quant.quantity + inventori_location.inventario
+                                inventario = inventario + inventori_location.inventario
+                                
                         inventario_total += inventario
 
                         _logger.info('inventario .....: %s', inventario)
