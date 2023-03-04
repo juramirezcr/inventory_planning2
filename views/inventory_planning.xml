@@ -95,6 +95,7 @@
                     <field name="company_id"/>
                     <field name="product_id"/>
                     <field name="pedidos_portal"/>
+                    <field name="diferencia"/>
                     <field name="demanda"/>
                     <field name="remanente"/>
                     <field name="entregado"/>
@@ -123,6 +124,7 @@
                             </group>
                             <group string="Pedidos de Ventas">
                                 <field name="pedidos_portal"/>
+                                <field name="diferencia"/>
                                 <field name="demanda"/>
                                 <field name="entregado"/>
                                 <field name="remanente"/>
@@ -149,6 +151,7 @@
                     <field name="product_id" type="row"/>
                     <field name="inventario" type="measure"/>
                     <field name="pedidos_portal" type="measure"/>
+                    <field name="diferencia" type="measure"/>
                     <field name="demanda" type="measure"/>
                     <field name="remanente" type="measure"/>
                     <field name="entregado" type="measure"/>
@@ -169,6 +172,9 @@
                     <separator/>
                     <group expand="0" string="Group By">
                         <filter name="group_product_id" string="product_id" icon="terp-partner" context="{'group_by':'product_id'}"/>
+                    </group>
+                    <group expand="0" string="Group By">
+                        <filter name="group_company_id" string="company_id" icon="terp-partner" context="{'group_by':'company_id'}"/>
                     </group>
                 </search>
             </field>
