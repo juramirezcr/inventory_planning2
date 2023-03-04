@@ -195,6 +195,8 @@ class InventoryPlanningConfig(models.Model):
                 # ------------------------------------------------------
                 _logger.info('PORTAL ORDERS.....')
                 pedidos_portal = 0.0
+                pedido_real_orden = 0.0
+                pedido_real_portal = 0.0
                 diferencia = 0.0
                 try:
                     # Buscar pedidos de portal
