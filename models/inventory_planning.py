@@ -210,32 +210,29 @@ class InventoryPlanningConfig(models.Model):
                                 ('create_date', '>', temp.fecha_inicio),
                                 ('order_id', '=', pedido_portal.id),
                                 ])
-                        
+                        #Ventas asociadas al pedido de portal
+                        sale_ids = pedido_portal.sale_ids
+                            
                         for linea_pedido_portal in lineas_pedidos_portal:
-                            
-                            #Ventas asociadas al pedido de portal
-                            sale_ids = pedido_portal.sale_ids
-                            
                             for sale_id in sale_ids:
-                                
+                                _logger.info('buscar linea de pedido de ventas.....%s', sale_id)
                                 ordenes = self.env['sale.order.line'].search([
                                 ('order_id', '=', sale_id.id),
                                 ('product_id', '=', producto.id),
                                 ('state', 'in', ['sale', 'done']),
                                 ])
-                                
                                 for orden in ordenes:
+                                    _logger.info('cantidad en pedido de ventas.....%s', orden.product_uom_qty)
                                     pedido_real_orden += orden.product_uom_qty
-                                
-                                pedido_real_portal = linea_pedido_portal.qty
-                                diferencia += pedido_real_portal - pedido_real_orden
+                                _logger.info('cantidad total pedido de ventas.....%s', pedido_real_orden)
                                 
                             pedidos_portal += linea_pedido_portal.qty
-
+                        diferencia = pedidos_portal - pedido_real_orden
+                        
                     _logger.info('Total pedidos portal.....%s', pedidos_portal)
                     vals = {
                         'pedidos_portal': pedidos_portal,
-                        'diferencia': pedidos_portal,
+                        'diferencia': diferencia,
                     }
                     _logger.info('registrar pedidos.....%s', vals)
                     inventory_planning.write(vals)
