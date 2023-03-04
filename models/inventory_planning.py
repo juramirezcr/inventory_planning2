@@ -106,7 +106,6 @@ class InventoryPlanningConfig(models.Model):
     product_ids = fields.Many2many('product.product', string='Products')
     company_ids = fields.Many2many('res.company', string='Companies')
     provider_ids = fields.Many2many('res.partner', string='Providers', domain=[('supplier', '=', True)])
-    locations = fields.Many2many('stock.location', string='Ubicaciones')
 
     @api.multi
     @api.depends()
