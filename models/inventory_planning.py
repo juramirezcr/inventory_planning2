@@ -196,6 +196,7 @@ class InventoryPlanningConfig(models.Model):
                 # ------------------------------------------------------
                 _logger.info('PORTAL ORDERS.....')
                 pedidos_portal = 0.0
+                diferencia = 0.0
                 try:
                     # Buscar pedidos de portal
                     buscar_pedidos_portal = self.env['portal.sale.order'].search([
@@ -210,12 +211,32 @@ class InventoryPlanningConfig(models.Model):
                                 ('create_date', '>', temp.fecha_inicio),
                                 ('order_id', '=', pedido_portal.id),
                                 ])
+                        
                         for linea_pedido_portal in lineas_pedidos_portal:
+                            
+                            #Ventas asociadas al pedido de portal
+                            sale_ids = pedido_portal.sale_ids
+                            
+                            for sale_id in sale_ids:
+                                
+                                ordenes = self.env['sale.order.line'].search([
+                                ('order_id', '=', sale_id.id),
+                                ('product_id', '=', producto.id),
+                                ('state', 'in', ['sale', 'done']),
+                                ])
+                                
+                                for orden in ordenes:
+                                    pedido_real_orden += orden.product_uom_qty
+                                
+                                pedido_real_portal = linea_pedido_portal.qty
+                                diferencia += pedido_real_portal - pedido_real_orden
+                                
                             pedidos_portal += linea_pedido_portal.qty
 
                     _logger.info('Total pedidos portal.....%s', pedidos_portal)
                     vals = {
                         'pedidos_portal': pedidos_portal,
+                        'diferencia': pedidos_portal,
                     }
                     _logger.info('registrar pedidos.....%s', vals)
                     inventory_planning.write(vals)
@@ -223,6 +244,7 @@ class InventoryPlanningConfig(models.Model):
                 except:
                     _logger.info('Error al consultar pedidos de portal.....')
 
+                
                 # ------------------------------------------------------
                 # ORDENES DE VENTAS
                 # ------------------------------------------------------
@@ -262,13 +284,7 @@ class InventoryPlanningConfig(models.Model):
                 except Exception as e:
                     _logger.info('Error al consultar ordenes de ventas.....:%s', str(e))
 
-                #Calcular Diferencia
-                diferencia = pedidos_portal - demanda
-                vals = {
-                        'diferencia': diferencia
-                        }
-                _logger.info('registrar diferencia.....%s', vals)
-                inventory_planning.write(vals)
+
 
                 # ------------------------------------------------------
                 # PEDIDOS DE COMPRA
