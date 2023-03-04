@@ -214,6 +214,9 @@ class InventoryPlanningConfig(models.Model):
                         sale_ids = pedido_portal.sale_ids
                             
                         for linea_pedido_portal in lineas_pedidos_portal:
+                            pedidos_portal += linea_pedido_portal.qty
+                            pedido_real_portal += linea_pedido_portal.qty
+                            
                             for sale_id in sale_ids:
                                 _logger.info('buscar linea de pedido de ventas.....%s', sale_id)
                                 ordenes = self.env['sale.order.line'].search([
@@ -226,8 +229,8 @@ class InventoryPlanningConfig(models.Model):
                                     pedido_real_orden += orden.product_uom_qty
                                 _logger.info('cantidad total pedido de ventas.....%s', pedido_real_orden)
                                 
-                            pedidos_portal += linea_pedido_portal.qty
-                        diferencia = pedidos_portal - pedido_real_orden
+                            
+                    diferencia = pedido_real_portal - pedido_real_orden
                         
                     _logger.info('Total pedidos portal.....%s', pedidos_portal)
                     vals = {
