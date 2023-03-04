@@ -262,7 +262,13 @@ class InventoryPlanningConfig(models.Model):
                 except Exception as e:
                     _logger.info('Error al consultar ordenes de ventas.....:%s', str(e))
 
-
+                #Calcular Diferencia
+                diferencia = pedidos_portal - demanda
+                vals = {
+                        'diferencia': diferencia
+                        }
+                _logger.info('registrar diferencia.....%s', vals)
+                inventory_planning.write(vals)
 
                 # ------------------------------------------------------
                 # PEDIDOS DE COMPRA
@@ -431,7 +437,8 @@ class InventoryPlanning(models.Model):
     entregado = fields.Float(required=False, copy=False, readonly=True, string='Delivered')
     facturado = fields.Float(required=False, copy=False, readonly=True, string='Invoiced')
     por_facturar = fields.Float(required=False, copy=False, readonly=True, string='Pending bill')
-
+    diferencia = fields.Float(required=False, copy=False, readonly=True, string='Difference', help='Portal Order not purchased')
+    
     def view_reserved_quantity(self):
         sml_ids = self.env['stock.move.line'].search([
                 ('product_id','=',self.product_id.id),
