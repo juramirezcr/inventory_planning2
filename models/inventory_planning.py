@@ -240,8 +240,9 @@ class InventoryPlanningConfig(models.Model):
                     _logger.info('registrar pedidos.....%s', vals)
                     inventory_planning.write(vals)
 
-                except:
-                    _logger.info('Error al consultar pedidos de portal.....')
+                except Exception as e:
+                    _logger.info('Error al consultar pedidos portal.....:%s', str(e))
+
 
                 
                 # ------------------------------------------------------
