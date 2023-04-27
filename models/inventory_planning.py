@@ -316,9 +316,9 @@ class InventoryPlanningConfig(models.Model):
                                 ])
 
                         for orden in ordenes:
-                            _logger.info('pedido de compra.....%s', linea_orden)
-                            _logger.info('fecha configuración.....%s', temp.fecha_inicio)
-                            _logger.info('fecha planificada.....%s', orden.date_planned.date())
+                            #_logger.info('pedido de compra.....%s', linea_orden)
+                            #_logger.info('fecha configuración.....%s', temp.fecha_inicio)
+                            #_logger.info('fecha planificada.....%s', orden.date_planned.date())
 
                             if orden.date_planned.date() >= temp.fecha_inicio:
                                 compras += linea_orden.product_uom_qty
@@ -359,9 +359,9 @@ class InventoryPlanningConfig(models.Model):
                         location_usage = quant.location_id.usage
                         ubicacion_id = quant.location_id.id
                         ubicacion_nombre = location_name
-                        _logger.info('location id .....: %s', ubicacion_id)
-                        _logger.info('location name .....: %s', location_name)
-                        _logger.info('location usage .....: %s', location_usage)
+                        #_logger.info('location id .....: %s', ubicacion_id)
+                        #_logger.info('location name .....: %s', location_name)
+                        #_logger.info('location usage .....: %s', location_usage)
 
                         # BUSCAR SI EXISTE EL PRODUCTO EN EL PLANEAMIENTO
                         inventory_planning_location = self.env['inventory_planning'].search(
