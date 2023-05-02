@@ -390,7 +390,6 @@ class InventoryPlanningConfig(models.Model):
                         #     ])
 
                         movimientos = self.env['stock.move.line'].sudo().search([
-                            ('company_id', '=', company.id),
                             ('product_id', '=',  producto.id),
                             ('location_id', '=', ubicacion_id),
                             ('state', 'not in', ['done', 'cancel']),
