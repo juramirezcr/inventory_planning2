@@ -154,7 +154,7 @@ class InventoryPlanningConfig(models.Model):
             companies = temp.company_ids
             productos = temp.product_ids
 
-        inventory_planning_delete = self.env['inventory_planning'].search(
+        inventory_planning_delete = self.env['inventory_planning'].sudo().search(
             [('inventory_planning_config', '=', temp.id)])
 
         for invetory_delete in inventory_planning_delete:
@@ -168,7 +168,7 @@ class InventoryPlanningConfig(models.Model):
                 _logger.info('Producto.....%s', producto.name)
 
                 # BUSCAR SI EXISTE EN EL PLANEAMIENTO EL PRODUCTO
-                inventory_planning = self.env['inventory_planning'].search(
+                inventory_planning = self.env['inventory_planning'].sudo().search(
                     [('inventory_planning_config', '=', temp.id),
                      ('product_id', '=', producto.id),
                      ('company_id', '=', company.id),
@@ -200,14 +200,14 @@ class InventoryPlanningConfig(models.Model):
                 diferencia = 0.0
                 try:
                     # Buscar pedidos de portal
-                    buscar_pedidos_portal = self.env['portal.sale.order'].search([
+                    buscar_pedidos_portal = self.env['portal.sale.order'].sudo().search([
                             ('company_id', '=', company.id),
                             ('create_date', '>', temp.fecha_inicio),
                             ('state', 'in', ['approved']),
                         ])
                     for pedido_portal in buscar_pedidos_portal:
                         # Buscar líneas de pedidos de portal
-                        lineas_pedidos_portal = self.env['portal.sale.order.line'].search([
+                        lineas_pedidos_portal = self.env['portal.sale.order.line'].sudo().search([
                                 ('product_id', '=', producto.id),
                                 ('create_date', '>', temp.fecha_inicio),
                                 ('order_id', '=', pedido_portal.id),
@@ -252,7 +252,7 @@ class InventoryPlanningConfig(models.Model):
                 # ------------------------------------------------------
                 _logger.info('LINEAS DE PEDIDOS DE VENTAS INVENTARIO.....')
                 try:
-                    ordenes = self.env['sale.order.line'].search([
+                    ordenes = self.env['sale.order.line'].sudo().search([
                                 ('company_id', '=', company.id),
                                 ('product_id', '=', producto.id),
                                 ('create_date', '>', temp.fecha_inicio),
@@ -292,7 +292,7 @@ class InventoryPlanningConfig(models.Model):
                 # PEDIDOS DE COMPRA
                 # ------------------------------------------------------
                 _logger.info('LINEAS DE PEDIDOS DE COMPRA.....')
-                lineas_ordenes = self.env['purchase.order.line'].search([
+                lineas_ordenes = self.env['purchase.order.line'].sudo().search([
                         ('company_id', '=', company.id),
                         ('product_id', '=', producto.id),
                         ('create_date', '>', temp.fecha_inicio),
@@ -311,7 +311,7 @@ class InventoryPlanningConfig(models.Model):
                         # Buscar la orden de compra para verificar la fecha
                         _logger.info('linea pedido de compra.....%s', linea_orden)
 
-                        ordenes = self.env['purchase.order'].search([
+                        ordenes = self.env['purchase.order'].sudo().search([
                                 ('id', '=', linea_orden.order_id.id),
                                 ])
 
@@ -389,7 +389,8 @@ class InventoryPlanningConfig(models.Model):
                         #     ('date_expected', '>', temp.fecha_inicio)
                         #     ])
 
-                        movimientos = self.env['stock.move.line'].search([
+                        movimientos = self.env['stock.move.line'].sudo().search([
+                            ('company_id', '=', company.id),
                             ('product_id', '=',  producto.id),
                             ('location_id', '=', ubicacion_id),
                             ('state', 'not in', ['done', 'cancel']),
