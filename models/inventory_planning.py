@@ -221,7 +221,7 @@ class InventoryPlanningConfig(models.Model):
                             
                             for sale_id in sale_ids:
                                 _logger.info('buscar linea de pedido de ventas.....%s', sale_id)
-                                ordenes = self.env['sale.order.line'].search([
+                                ordenes = self.env['sale.order.line'].sudo().search([
                                 ('order_id', '=', sale_id.id),
                                 ('product_id', '=', producto.id),
                                 ('state', 'in', ['sale', 'done']),
@@ -364,7 +364,7 @@ class InventoryPlanningConfig(models.Model):
                         #_logger.info('location usage .....: %s', location_usage)
 
                         # BUSCAR SI EXISTE EL PRODUCTO EN EL PLANEAMIENTO
-                        inventory_planning_location = self.env['inventory_planning'].search(
+                        inventory_planning_location = self.env['inventory_planning'].sudo().search(
                             [('inventory_planning_config', '=', temp.id),
                              ('product_id', '=', producto.id),
                              ('company_id', '=', company.id),
